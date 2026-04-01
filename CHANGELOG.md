@@ -4,6 +4,18 @@ All notable changes to portracker will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.7] - 2026-04-02
+
+### Fixed
+
+- **[Container Heuristic]**: Fixed `_getContainerByProcessName` false-positive — now checks image name instead of container name to avoid misattribution in stacks named `portracker-*` (#102 by @leinardi)
+- **[Frontend Error Logging]**: Downgraded `ENOENT` log from error to debug when frontend is not built yet (#101 by @leinardi)
+- **[Swarm Fallback Icon]**: Docker Swarm services now fall back to the Docker whale icon when CDN lookup fails (#103 by @leinardi)
+
+### Security
+
+- **[npm Vulnerabilities]**: Removed unused root dependencies `jq`, `sqlite3`, and `react-router-dom` that pulled in critical/high transitive vulnerabilities (#100 by @leinardi)
+
 ## [1.3.6] - 2026-04-02
 
 ### Docker Swarm
