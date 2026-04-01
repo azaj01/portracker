@@ -295,6 +295,16 @@ class DockerCollector extends BaseCollector {
             }
           });
 
+          const swarmPorts = await this._getSwarmServicePorts();
+          swarmPorts.forEach((port) => {
+            const normalizedIp = this._normalizeHostIp(port.host_ip);
+            const key = `${normalizedIp}:${port.host_port}:${port.protocol}`;
+            if (!dockerPortsMap.has(key)) {
+              dockerPortsMap.set(key, port);
+              allPorts.push(port);
+            }
+          });
+
           const allRunningContainers = await this._getHostNetworkContainers();
           allRunningContainers.forEach((container) => {
             if (container.pids && container.pids.length > 0) {
@@ -410,9 +420,12 @@ class DockerCollector extends BaseCollector {
       for (const container of containers) {
         const containerName = container.Names;
         const containerId = container.ID;
-        const composeProject = container.Labels?.['com.docker.compose.project'] || null;
-        const composeService = container.Labels?.['com.docker.compose.service'] || null;
-        
+
+        // For swarm task containers, use the service name as the owner so host-mode
+        // published ports are attributed and grouped consistently with ingress services.
+        const { composeProject, composeService, effectiveOwner } =
+          this._extractSwarmLabels(container.Labels, containerName);
+
         if (!container.Ports || container.Ports.length === 0) {
           continue;
         }
@@ -420,9 +433,9 @@ class DockerCollector extends BaseCollector {
         const rawPorts = await this.dockerApi.docker.getContainer(container.ID).inspect();
         const portBindings = rawPorts.NetworkSettings.Ports || {};
 
-  for (const [containerPort, hostBindings] of Object.entries(portBindings)) {
+        for (const [containerPort, hostBindings] of Object.entries(portBindings)) {
           if (!hostBindings) continue;
-          
+
           const [port, protocol] = containerPort.split('/');
           const targetPort = parseInt(port, 10);
 
@@ -435,13 +448,13 @@ class DockerCollector extends BaseCollector {
             portEntries.push(
               this.normalizePortEntry({
                 source: "docker",
-                owner: containerName,
+                owner: effectiveOwner,
                 protocol: protocol,
                 host_ip: hostIp,
                 host_port: hostPort,
                 target: `${containerId}:${targetPort}`,
                 container_id: containerId,
-                app_id: containerName,
+                app_id: effectiveOwner,
                 compose_project: composeProject,
                 compose_service: composeService,
                 pids: [],
@@ -803,7 +816,7 @@ class DockerCollector extends BaseCollector {
                 }
                 
                 this.logInfo(`Fallback /proc method: ${allPorts.length} ports found (TCP: ${tcpPorts.length}, UDP: ${udpPorts.length})`);
-                return allPorts.map(port => this.normalizePortEntry(port));
+                return allPorts.map(port => this.normalizePortEntry({ source: port.source || 'system', ...port }));
               }
             }
           } catch (procErr) {
