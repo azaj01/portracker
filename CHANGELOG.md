@@ -4,6 +4,20 @@ All notable changes to portracker will be documented in this file.
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-04-02
+
+### Docker Swarm
+
+- **[Swarm Ingress Support]**: Docker Swarm services using `mode: ingress` published ports are now correctly attributed as Docker services instead of system ports (#98, PR #99 by @leinardi)
+  - **[sub]** Swarm port discovery via Docker Services API
+  - **[sub]** Shared logic in BaseCollector for both Docker and TrueNAS collectors
+  - **[sub]** Dedup keys now include protocol for consistency
+
+### Fixed
+
+- **[Port Dedup Key Consistency]**: Fixed inconsistent dedup key format between Docker and TrueNAS collectors — both now include protocol in the key
+- **[CI]**: Fixed Docker build workflow failing on fork PRs due to missing secrets
+
 ## [1.3.5] - 2026-03-02
 
 ### Security
